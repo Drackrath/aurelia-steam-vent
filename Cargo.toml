@@ -1,17 +1,21 @@
 [package]
-name = "steam-vent"
+name = "aurelia-steam-vent"
 version = "0.6.0"
 authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2024"
-description = "Interact with the Steam network via rust"
+description = "Interact with the Steam network via rust (Aurelia fork of steam-vent with per-session logon IDs)"
 license = "MIT"
-repository = "https://codeberg.org/steam-vent/steam-vent"
+repository = "https://codeberg.org/Drackrath/aurelia-steam-vent"
+readme = "README.md"
 rust-version = "1.88.0"
+
+[lib]
+name = "steam_vent"
 
 [dependencies]
 steam-vent-proto-common = "0.5.1"
 steam-vent-proto-steam = "0.5.2"
-steam-vent-core = { version = "0.1", path = "./core" }
+steam-vent-core = { package = "aurelia-steam-vent-core", version = "0.1", path = "./core" }
 steam-vent-crypto = { version = "0.2", path = "./crypto" }
 steam-machine-id = "0.2.0"
 tokio = { version = "1.47.1", features = ["net", "io-util", "macros", "io-std"] }

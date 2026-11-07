@@ -198,11 +198,20 @@ pub async fn login(
     account: Option<&str>,
     steam_id: SteamID,
     refresh_token: &str,
+    logon_id: u32,
 ) -> Result<Session> {
-    let mut ip = CMsgIPAddress::new();
-    ip.set_v4(0);
+    let logon = logon_message(account, refresh_token, logon_id);
+    send_logon(connection, logon, steam_id).await
+}
 
-    let logon = CMsgClientLogon {
+/// Build the client logon message.
+///
+/// Private IP doubles as logon ID.
+fn logon_message(account: Option<&str>, refresh_token: &str, logon_id: u32) -> CMsgClientLogon {
+    let mut ip = CMsgIPAddress::new();
+    ip.set_v4(logon_id);
+
+    CMsgClientLogon {
         protocol_version: Some(65580),
         client_os_type: Some(203),
         account_name: account.map(String::from),
@@ -215,9 +224,7 @@ pub async fn login(
         access_token: Some(refresh_token.into()),
         client_package_version: Some(1771),
         ..CMsgClientLogon::default()
-    };
-
-    send_logon(connection, logon, steam_id).await
+    }
 }
 
 async fn send_logon(
@@ -305,4 +312,23 @@ pub async fn hello<C: ConnectionImpl>(conn: &mut C) -> std::result::Result<(), N
 
     conn.raw_send(header, req).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod logon_id_tests {
+    use super::*;
+
+    #[test]
+    fn logon_id_is_sent_as_private_ip() {
+        let logon = logon_message(Some("user"), "token", 0xDEAD_BEEF);
+        assert_eq!(logon.obfuscated_private_ip.v4(), 0xDEAD_BEEF);
+    }
+
+    #[test]
+    fn default_logon_id_stays_zero() {
+        let logon = logon_message(None, "token", 0);
+        assert_eq!(logon.obfuscated_private_ip.v4(), 0);
+        assert!(logon.account_name.is_none());
+        assert_eq!(logon.access_token(), "token");
+    }
 }

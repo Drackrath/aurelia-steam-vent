@@ -116,6 +116,45 @@ impl Connection {
             .await
     }
 
+    /// Password logon with a logon ID.
+    ///
+    /// Same-ID logons replace each other.
+    pub async fn login_with_logon_id<H: AuthConfirmationHandler, G: GuardDataStore>(
+        server_list: &ServerList,
+        account: &str,
+        password: &str,
+        guard_data_store: G,
+        confirmation_handler: H,
+        client_info: &ClientInfo,
+        logon_id: u32,
+    ) -> Result<Self, ConnectionError> {
+        UnAuthenticatedConnection::connect(server_list)
+            .await?
+            .login_with_logon_id(
+                account,
+                password,
+                guard_data_store,
+                confirmation_handler,
+                client_info,
+                logon_id,
+            )
+            .await
+    }
+
+    /// Refresh-token logon with a logon ID.
+    ///
+    /// See [`Self::login_with_logon_id`].
+    pub async fn login_with_refresh_token_and_logon_id(
+        server_list: &ServerList,
+        token: &RefreshToken,
+        logon_id: u32,
+    ) -> Result<Self, ConnectionError> {
+        UnAuthenticatedConnection::connect(server_list)
+            .await?
+            .login_with_refresh_token_and_logon_id(token, logon_id)
+            .await
+    }
+
     /// Get the refresh token for the current session.
     ///
     /// This can be used for future authentication with [`Connection::login_with_refresh_token`].
