@@ -16,11 +16,16 @@ from upstream in one way:
   `UnAuthenticatedConnection` methods) take the ID, so sessions with
   different IDs stay connected side by side. `login` and
   `login_with_refresh_token` still send 0.
+- Confirmation handlers return `Send` futures, so a password login can run
+  inside `tokio::spawn` on a multi-threaded runtime. Upstream 0.6 returns
+  non-`Send` futures, which makes every login future non-`Send`. This is a
+  breaking change for custom handlers whose futures hold non-thread-safe
+  values across an `.await`.
 
 Depend on it under the usual name:
 
 ```toml
-steam-vent = { package = "aurelia-steam-vent", version = "0.6.0" }
+steam-vent = { package = "aurelia-steam-vent", version = "0.7.0" }
 ```
 
 Allows communication with the steam servers using the same protocol as the

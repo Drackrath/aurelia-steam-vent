@@ -157,12 +157,12 @@ pub trait AuthConfirmationHandler {
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this>;
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this>;
 
     /// Wrap the handler in a box
-    fn boxed(self) -> Box<dyn AuthConfirmationHandler>
+    fn boxed(self) -> Box<dyn AuthConfirmationHandler + Send>
     where
-        Self: Sized + 'static,
+        Self: Sized + Send + 'static,
     {
         Box::new(self)
     }
@@ -172,7 +172,7 @@ impl<Handler: AuthConfirmationHandler> AuthConfirmationHandler for &mut Handler 
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         (**self).handle_confirmation(allowed_confirmations)
     }
 }
@@ -220,7 +220,7 @@ where
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         for method in allowed_confirmations {
             if let Some(token_type) = method.token_type() {
                 let msg = format!(
@@ -270,7 +270,7 @@ impl AuthConfirmationHandler for SharedSecretAuthConfirmationHandler {
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         for method in allowed_confirmations {
             if let Some(token_type) = method.token_type() {
                 return Box::new(async move {
@@ -293,7 +293,7 @@ impl AuthConfirmationHandler for DeviceConfirmationHandler {
     fn handle_confirmation(
         &mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + '_> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + '_> {
         for method in allowed_confirmations {
             if method.class() == ConfirmationMethodClass::Confirmation {
                 return Box::new(async move { Some(ConfirmationAction::None) });
@@ -311,7 +311,7 @@ where
     fn handle_confirmation(
         &mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + '_> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + '_> {
         let left = Box::into_pin(self.0.handle_confirmation(allowed_confirmations));
         let right = Box::into_pin(self.1.handle_confirmation(allowed_confirmations));
         Box::new(async move {
@@ -333,7 +333,16 @@ impl AuthConfirmationHandler for Box<dyn AuthConfirmationHandler> {
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
+        self.as_mut().handle_confirmation(allowed_confirmations)
+    }
+}
+
+impl AuthConfirmationHandler for Box<dyn AuthConfirmationHandler + Send> {
+    fn handle_confirmation<'this>(
+        &'this mut self,
+        allowed_confirmations: &[ConfirmationMethod],
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         self.as_mut().handle_confirmation(allowed_confirmations)
     }
 }
@@ -362,7 +371,7 @@ impl<Handler: AuthConfirmationHandler> AuthConfirmationHandler for &mut [Handler
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         let stream = iter_handler(self.iter_mut(), allowed_confirmations);
         Box::new(first_some(stream))
     }
@@ -372,7 +381,7 @@ impl<const N: usize, Handler: AuthConfirmationHandler> AuthConfirmationHandler f
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         let stream = iter_handler(self.iter_mut(), allowed_confirmations);
         Box::new(first_some(stream))
     }
@@ -382,7 +391,7 @@ impl<Handler: AuthConfirmationHandler> AuthConfirmationHandler for Vec<Handler> 
     fn handle_confirmation<'this>(
         &'this mut self,
         allowed_confirmations: &[ConfirmationMethod],
-    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + 'this> {
+    ) -> Box<dyn Future<Output = Option<ConfirmationAction>> + Send + 'this> {
         let stream = iter_handler(self.iter_mut(), allowed_confirmations);
         Box::new(first_some(stream))
     }
