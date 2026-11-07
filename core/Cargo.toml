@@ -1,7 +1,14 @@
 [package]
-name = "steam-vent-core"
+name = "aurelia-steam-vent-core"
 version = "0.1.0"
+authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2024"
+description = "Core message types for aurelia-steam-vent (Aurelia fork of steam-vent)"
+license = "MIT"
+repository = "https://codeberg.org/Drackrath/aurelia-steam-vent"
+
+[lib]
+name = "steam_vent_core"
 
 [dependencies]
 steam-vent-proto-common = "0.5.1"
