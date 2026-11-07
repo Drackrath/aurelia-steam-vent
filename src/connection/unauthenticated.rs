@@ -100,8 +100,23 @@ impl UnAuthenticatedConnection {
         self,
         account: &str,
         password: &str,
+        guard_data_store: G,
+        confirmation_handler: H,
+    ) -> Result<Connection, ConnectionError> {
+        self.login_with_logon_id(account, password, guard_data_store, confirmation_handler, 0)
+            .await
+    }
+
+    /// Like [`Self::login`], with a logon ID.
+    ///
+    /// Same-ID logons replace each other.
+    pub async fn login_with_logon_id<H: AuthConfirmationHandler, G: GuardDataStore>(
+        self,
+        account: &str,
+        password: &str,
         mut guard_data_store: G,
         confirmation_handler: H,
+        logon_id: u32,
     ) -> Result<Connection, ConnectionError> {
         let mut raw = self.0;
         let guard_data = guard_data_store.load(account).await.unwrap_or_else(|e| {
@@ -149,6 +164,7 @@ impl UnAuthenticatedConnection {
             steam_id,
             // yes we send the refresh token as access token, yes it makes no sense, yes this is actually required
             tokens.refresh_token.as_ref(),
+            logon_id,
         )
         .await?;
         raw.setup_heartbeat();
@@ -162,6 +178,18 @@ impl UnAuthenticatedConnection {
         self,
         account: &str,
         access_token: &str,
+    ) -> Result<Connection, ConnectionError> {
+        self.access_with_logon_id(account, access_token, 0).await
+    }
+
+    /// Like [`Self::access`], with a logon ID.
+    ///
+    /// Same-ID logons replace each other.
+    pub async fn access_with_logon_id(
+        self,
+        account: &str,
+        access_token: &str,
+        logon_id: u32,
     ) -> Result<Connection, ConnectionError> {
         let mut raw = self.0;
 
@@ -198,6 +226,7 @@ impl UnAuthenticatedConnection {
             )
             .map_err(|_| ConnectionError::LoginError(LoginError::InvalidSteamId))?,
             access_token,
+            logon_id,
         )
         .await?;
         raw.setup_heartbeat();

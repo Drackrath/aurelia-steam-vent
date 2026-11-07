@@ -102,6 +102,44 @@ impl Connection {
             .await
     }
 
+    /// Password logon with a logon ID.
+    ///
+    /// Same-ID logons replace each other.
+    pub async fn login_with_logon_id<H: AuthConfirmationHandler, G: GuardDataStore>(
+        server_list: &ServerList,
+        account: &str,
+        password: &str,
+        guard_data_store: G,
+        confirmation_handler: H,
+        logon_id: u32,
+    ) -> Result<Self, ConnectionError> {
+        UnAuthenticatedConnection::connect(server_list)
+            .await?
+            .login_with_logon_id(
+                account,
+                password,
+                guard_data_store,
+                confirmation_handler,
+                logon_id,
+            )
+            .await
+    }
+
+    /// Token logon with a logon ID.
+    ///
+    /// See [`Self::login_with_logon_id`] for replacement.
+    pub async fn access_with_logon_id(
+        server_list: &ServerList,
+        account: &str,
+        access_token: &str,
+        logon_id: u32,
+    ) -> Result<Self, ConnectionError> {
+        UnAuthenticatedConnection::connect(server_list)
+            .await?
+            .access_with_logon_id(account, access_token, logon_id)
+            .await
+    }
+
     pub fn access_token(&self) -> Option<&str> {
         self.session().access_token.as_deref()
     }

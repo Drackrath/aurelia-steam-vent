@@ -2,6 +2,26 @@
 
 ### Interact with the Steam network via rust
 
+This is the [Aurelia](https://github.com/Drackrath/Aurelia) fork of
+[steam-vent](https://codeberg.org/steam-vent/steam-vent) 0.5.0, published as
+`aurelia-steam-vent`. The library is still imported as `steam_vent`. It differs
+from upstream 0.5.0 in one way:
+
+- Logons can carry a logon ID. Upstream always sends 0, and Steam ends an
+  earlier session (`LogonSessionReplaced`, EResult 34) when another session
+  logs on to the same account from the same public IP with the same ID. So
+  two upstream clients on one machine keep logging each other out. The new
+  `Connection::access_with_logon_id` and `Connection::login_with_logon_id`
+  (and the matching `UnAuthenticatedConnection` methods) take the ID, so
+  sessions with different IDs stay connected side by side. `access` and
+  `login` still send 0.
+
+Depend on it under the usual name:
+
+```toml
+steam-vent = { package = "aurelia-steam-vent", version = "0.5.1" }
+```
+
 Allows communication with the steam servers using the same protocol as the
 regular steam client.
 
