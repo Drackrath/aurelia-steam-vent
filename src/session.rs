@@ -180,17 +180,14 @@ pub async fn anonymous(connection: &RawConnection, account_type: AccountType) ->
         ..CMsgClientLogon::default()
     };
 
-    send_logon(
-        connection,
-        logon,
-        SteamID::new(
-            0,
-            Instance::new(InstanceType::All, InstanceFlags::None),
-            account_type,
-            Universe::Public,
-        ),
-    )
-    .await
+    let steam_id = SteamID::new(
+        0,
+        Instance::new(InstanceType::All, InstanceFlags::None),
+        account_type,
+        Universe::Public,
+    );
+    // Anonymous logons carry no token.
+    send_logon(connection, logon, steam_id, RefreshToken::anonymous(steam_id)).await
 }
 
 pub async fn login(
@@ -200,8 +197,9 @@ pub async fn login(
     refresh_token: &str,
     logon_id: u32,
 ) -> Result<Session> {
+    let token = RefreshToken::new(refresh_token.to_string())?;
     let logon = logon_message(account, refresh_token, logon_id);
-    send_logon(connection, logon, steam_id).await
+    send_logon(connection, logon, steam_id, token).await
 }
 
 /// Build the client logon message.
@@ -231,14 +229,8 @@ async fn send_logon(
     connection: &RawConnection,
     logon: CMsgClientLogon,
     steam_id: SteamID,
+    refresh_token: RefreshToken,
 ) -> Result<Session> {
-    let refresh_token = logon
-        .access_token
-        .clone()
-        .map(RefreshToken::new)
-        .transpose()?
-        .ok_or(LoginError::NoToken)?;
-
     let header = NetMessageHeader {
         source_job_id: JobId::NONE,
         target_job_id: JobId::NONE,
@@ -330,5 +322,58 @@ mod logon_id_tests {
         assert_eq!(logon.obfuscated_private_ip.v4(), 0);
         assert!(logon.account_name.is_none());
         assert_eq!(logon.access_token(), "token");
+    }
+}
+
+#[cfg(test)]
+mod anonymous_tests {
+    use super::*;
+    use crate::net::RawNetMessage;
+    use bytes::BytesMut;
+    use futures_util::StreamExt;
+    use tokio::sync::mpsc;
+
+    /// Fake CM answering one logon.
+    async fn fake_cm() -> RawConnection {
+        let (out_tx, mut out_rx) = mpsc::unbounded_channel::<BytesMut>();
+        let (in_tx, in_rx) = mpsc::unbounded_channel::<crate::net::Result<BytesMut>>();
+        tokio::spawn(async move {
+            // Hello, then the logon.
+            let _hello = out_rx.recv().await;
+            let logon = out_rx.recv().await.expect("client sent a logon");
+            let logon = RawNetMessage::read(logon).unwrap();
+            assert_eq!(logon.kind, CMsgClientLogon::KIND);
+            let mut response = CMsgClientLogonResponse::new();
+            response.set_eresult(1);
+            let reply = RawNetMessage::from_message(NetMessageHeader::default(), response)
+                .unwrap()
+                .into_bytes();
+            in_tx.send(Ok(reply)).unwrap();
+            // Keep the stream open.
+            std::future::pending::<()>().await;
+        });
+        let sender = futures_util::sink::unfold(out_tx, |tx, msg: BytesMut| async move {
+            tx.send(msg).map_err(|_| NetworkError::EOF)?;
+            Ok::<_, NetworkError>(tx)
+        });
+        let receiver = tokio_stream::wrappers::UnboundedReceiverStream::new(in_rx).boxed();
+        RawConnection::from_sender_receiver(Box::pin(sender), receiver)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn anonymous_logon_needs_no_token() {
+        let connection = fake_cm().await;
+        let session = anonymous(&connection, AccountType::AnonUser)
+            .await
+            .expect("anonymous logon must not demand a token");
+        assert!(session.auth.refresh_token.is_empty());
+        assert_eq!(session.auth.refresh_token.token(), "");
+    }
+
+    #[test]
+    fn real_logons_still_need_a_valid_token() {
+        assert!(RefreshToken::new("not-a-jwt".into()).is_err());
     }
 }

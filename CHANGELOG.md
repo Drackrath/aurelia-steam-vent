@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+- `Connection::anonymous` and `anonymous_server` work again. They failed with
+  `LoginError::NoToken` because the logon demanded a refresh token. Anonymous
+  connections now carry an empty `RefreshToken` (`RefreshToken::is_empty`).
+
 ## 0.6.0 (unreleased)
 
 ### Breaking
