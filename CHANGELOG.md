@@ -42,3 +42,10 @@
   `steam-vent-core` (and are re-exported from `steam-vent`). This provides a
   smaller api surface for higher level wrappers (e.g. `steam-vent-chat`) to
   allow decoupling their version from `steam-vent` in most cases.
+- Logons can now carry a logon ID through `Connection::login_with_logon_id`,
+  `Connection::login_with_refresh_token_and_logon_id` and the matching
+  `UnAuthenticatedConnection` methods. Steam ends an earlier session
+  (`LogonSessionReplaced`) when another session logs on to the same account
+  from the same public IP with the same logon ID, so sessions with different
+  IDs can stay connected side by side. `login` and `login_with_refresh_token`
+  keep sending 0.

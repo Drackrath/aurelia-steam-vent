@@ -78,9 +78,32 @@ impl UnAuthenticatedConnection {
         self,
         account: &str,
         password: &str,
+        guard_data_store: G,
+        confirmation_handler: H,
+        client_info: &ClientInfo,
+    ) -> Result<Connection, ConnectionError> {
+        self.login_with_logon_id(
+            account,
+            password,
+            guard_data_store,
+            confirmation_handler,
+            client_info,
+            0,
+        )
+        .await
+    }
+
+    /// Like [`Self::login`], with a logon ID.
+    ///
+    /// Same-ID logons replace each other.
+    pub async fn login_with_logon_id<H: AuthConfirmationHandler, G: GuardDataStore>(
+        self,
+        account: &str,
+        password: &str,
         mut guard_data_store: G,
         mut confirmation_handler: H,
         client_info: &ClientInfo,
+        logon_id: u32,
     ) -> Result<Connection, ConnectionError> {
         let mut raw = self.0;
         let guard_data = guard_data_store.load(account).await.unwrap_or_else(|e| {
@@ -132,6 +155,7 @@ impl UnAuthenticatedConnection {
             Some(account),
             steam_id,
             tokens.refresh_token.as_ref(),
+            logon_id,
         )
         .await?;
         raw.session = session.session;
@@ -146,13 +170,24 @@ impl UnAuthenticatedConnection {
         self,
         token: &RefreshToken,
     ) -> Result<Connection, ConnectionError> {
+        self.login_with_refresh_token_and_logon_id(token, 0).await
+    }
+
+    /// Like [`Self::login_with_refresh_token`], with a logon ID.
+    ///
+    /// Same-ID logons replace each other.
+    pub async fn login_with_refresh_token_and_logon_id(
+        self,
+        token: &RefreshToken,
+        logon_id: u32,
+    ) -> Result<Connection, ConnectionError> {
         let mut raw = self.0;
 
         if token.expired() {
             return Err(RefreshTokenError::Expired.into());
         }
 
-        let session = login(&mut raw, None, token.subject, token.token()).await?;
+        let session = login(&mut raw, None, token.subject, token.token(), logon_id).await?;
         raw.session = session.session;
         raw.setup_heartbeat(session.auth.steam_id);
         Ok(Connection::new(raw, session.auth))
