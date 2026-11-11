@@ -54,3 +54,6 @@
   from the same public IP with the same logon ID, so sessions with different
   IDs can stay connected side by side. `login` and `login_with_refresh_token`
   keep sending 0.
+- `Connection::anonymous` and `Connection::anonymous_server` no longer fail with
+  `LoginError::NoToken`. Anonymous connections carry an empty `RefreshToken`
+  (see `RefreshToken::is_empty`).

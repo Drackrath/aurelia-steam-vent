@@ -409,6 +409,20 @@ impl RefreshToken {
         })
     }
 
+    /// Empty token for anonymous sessions.
+    pub(crate) fn anonymous(subject: SteamID) -> Self {
+        RefreshToken {
+            raw: String::new(),
+            subject,
+            expiration: SystemTime::UNIX_EPOCH,
+        }
+    }
+
+    /// Whether this is a placeholder.
+    pub fn is_empty(&self) -> bool {
+        self.raw.is_empty()
+    }
+
     /// Get the raw token to use for authentiaction or storage
     pub fn token(&self) -> &str {
         &self.raw
