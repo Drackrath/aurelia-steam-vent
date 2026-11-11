@@ -414,3 +414,48 @@ macro_rules! impl_connection {
 impl_connection!(RawConnection);
 impl_connection!(Connection);
 impl_connection!(GameCoordinator);
+
+#[cfg(test)]
+mod send_tests {
+    use super::*;
+    use crate::auth::{
+        AuthConfirmationHandler, ClientInfo, ConsoleAuthConfirmationHandler,
+        DeviceConfirmationHandler, FileGuardDataStore,
+    };
+
+    fn assert_send<T: Send>(_: &T) {}
+
+    // Compiling this is the test.
+    #[allow(dead_code)]
+    fn login_futures_are_send(list: &ServerList, token: &RefreshToken) {
+        let combined = (
+            ConsoleAuthConfirmationHandler::default(),
+            DeviceConfirmationHandler,
+        );
+        let info = ClientInfo::default();
+        let fut = Connection::login(
+            list,
+            "a",
+            "b",
+            FileGuardDataStore::user_cache(),
+            combined,
+            &info,
+        );
+        assert_send(&fut);
+        let boxed = DeviceConfirmationHandler.boxed();
+        let fut = Connection::login(
+            list,
+            "a",
+            "b",
+            FileGuardDataStore::user_cache(),
+            boxed,
+            &info,
+        );
+        assert_send(&fut);
+        let fut = Connection::login_with_refresh_token_and_logon_id(list, token, 7);
+        assert_send(&fut);
+    }
+
+    #[test]
+    fn login_futures_compile_as_send() {}
+}

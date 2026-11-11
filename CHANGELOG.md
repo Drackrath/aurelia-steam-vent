@@ -15,6 +15,11 @@
 - Authenticating with an existing refresh token now requires parsing the raw
   token into a `AccessToken` before using it. And the naming has been fixed from
   using "access token" to "refresh token".
+- `AuthConfirmationHandler::handle_confirmation` now returns a `Send` future
+  and `AuthConfirmationHandler::boxed` returns a
+  `Box<dyn AuthConfirmationHandler + Send>`, so password logins can run inside
+  `tokio::spawn` on a multi-threaded runtime. Custom handlers whose futures hold
+  non-thread-safe values across an `.await` need to be adjusted.
 
 #### Connection
 
