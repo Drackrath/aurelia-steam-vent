@@ -146,7 +146,7 @@ pub async fn encode_message<T: SendableMessage, S: Sink<BytesMut, Error = Networ
     write_header(header, &mut writer, message.kind(), message.is_protobuf())?;
     message.write_body(&mut writer)?;
 
-    trace!("encoded message({} bytes): {:?}", buff.len(), buff.as_ref());
+    trace!("encoded message({} bytes)", buff.len());
     dst.send(buff).await?;
 
     Ok(())
@@ -171,7 +171,7 @@ pub async fn connect<A: ToSocketAddrs + Debug>(
     trace!("using nonce: {:?}", encrypt_request.nonce);
     let key = generate_session_key(None);
 
-    trace!("generated session keys: {:?}", key.plain);
+    trace!("generated session keys");
     trace!("  encrypted: {:?}", key.encrypted);
 
     let response = ClientEncryptResponse {

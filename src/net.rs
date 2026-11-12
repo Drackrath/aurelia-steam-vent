@@ -167,8 +167,7 @@ pub(crate) fn write_header<W: WriteBytesExt, K: MsgKindEnum>(
     } else if proto {
         trace!(
             "writing header for {:?} protobuf message: {:?}",
-            kind,
-            header
+            kind, header
         );
         let proto_header = proto_header(header, kind.into());
         writer.write_u32::<LittleEndian>(kind.encode_kind(true))?;
@@ -288,7 +287,7 @@ impl RawNetMessage {
         let header_buffer = buff.split();
         let mut writer = (&mut buff).writer();
         message.write_body(&mut writer)?;
-        trace!("encoded body({} bytes): {:x?}", buff.len(), buff.as_ref());
+        trace!("encoded body({} bytes)", buff.len());
 
         Ok(RawNetMessage {
             kind: kind.into(),

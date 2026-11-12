@@ -218,12 +218,24 @@ impl PendingAuth {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct Token(String);
 
 impl AsRef<str> for Token {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
+    }
+}
+
+impl std::fmt::Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Token([redacted])")
+    }
+}
+
+impl Drop for Token {
+    fn drop(&mut self) {
+        zeroize::Zeroize::zeroize(&mut self.0);
     }
 }
 
@@ -359,11 +371,27 @@ pub(crate) async fn perform_confirmation<C: AuthConfirmationHandler>(
 /// [`Connection::refresh_token`]: `crate::Connection::refresh_token`
 /// [`Connection::login_with_refresh_token`]: `crate::Connection::login_with_refresh_token`
 #[non_exhaustive]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RefreshToken {
     raw: String,
     pub subject: SteamID,
     pub expiration: SystemTime,
+}
+
+impl std::fmt::Debug for RefreshToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RefreshToken")
+            .field("raw", &"[redacted]")
+            .field("subject", &self.subject)
+            .field("expiration", &self.expiration)
+            .finish()
+    }
+}
+
+impl Drop for RefreshToken {
+    fn drop(&mut self) {
+        zeroize::Zeroize::zeroize(&mut self.raw);
+    }
 }
 
 impl RefreshToken {
@@ -455,4 +483,39 @@ pub enum RefreshTokenError {
     InvalidSubject,
     #[error("refresh token is expired")]
     Expired,
+}
+
+#[cfg(test)]
+mod redaction_tests {
+    use super::*;
+
+    const SECRET: &str = "SIGNATURE-SECRET";
+
+    fn jwt() -> String {
+        let payload = BASE64_URL_SAFE_NO_PAD
+            .encode(r#"{"sub":"76561197960287930","iss":"steam","exp":4102444800}"#);
+        format!("eyJhbGciOiJFZERTQSJ9.{payload}.{SECRET}")
+    }
+
+    #[test]
+    fn refresh_token_debug_hides_value() {
+        let token = RefreshToken::new(jwt()).unwrap();
+        let out = format!("{token:?}");
+        assert!(!out.contains(SECRET) && !out.contains("eyJ"), "{out}");
+        assert!(out.contains("redacted") && out.contains("subject"));
+        // Value still usable.
+        assert!(token.token().ends_with(SECRET));
+    }
+
+    #[test]
+    fn tokens_debug_hides_values() {
+        let tokens = Tokens {
+            access_token: Token(jwt()),
+            refresh_token: Token(jwt()),
+            new_guard_data: None,
+        };
+        let out = format!("{tokens:?}");
+        assert!(!out.contains(SECRET) && !out.contains("eyJ"), "{out}");
+        assert_eq!(tokens.refresh_token.as_ref(), jwt());
+    }
 }
