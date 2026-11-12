@@ -163,8 +163,13 @@ impl StartedAuth {
 }
 
 /// The token to send to steam to confirm the login
-#[derive(Debug)]
 pub struct SteamGuardToken(String);
+
+impl std::fmt::Debug for SteamGuardToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SteamGuardToken([redacted])")
+    }
+}
 
 impl SteamGuardToken {
     /// Construct a guard token from a raw one-time code (an email or device
@@ -239,12 +244,23 @@ impl Drop for Token {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct Tokens {
     #[allow(dead_code)]
     pub access_token: Token,
     pub refresh_token: Token,
     pub new_guard_data: Option<String>,
+}
+
+impl std::fmt::Debug for Tokens {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let guard = self.new_guard_data.as_ref().map(|_| "[redacted]");
+        f.debug_struct("Tokens")
+            .field("access_token", &self.access_token)
+            .field("refresh_token", &self.refresh_token)
+            .field("new_guard_data", &guard)
+            .finish()
+    }
 }
 
 async fn poll_until_info(
@@ -512,10 +528,19 @@ mod redaction_tests {
         let tokens = Tokens {
             access_token: Token(jwt()),
             refresh_token: Token(jwt()),
-            new_guard_data: None,
+            new_guard_data: Some("GUARD-DATA-SECRET".into()),
         };
         let out = format!("{tokens:?}");
         assert!(!out.contains(SECRET) && !out.contains("eyJ"), "{out}");
+        assert!(!out.contains("GUARD-DATA-SECRET"), "{out}");
         assert_eq!(tokens.refresh_token.as_ref(), jwt());
+        assert_eq!(tokens.new_guard_data.as_deref(), Some("GUARD-DATA-SECRET"));
+    }
+
+    #[test]
+    fn guard_token_debug_hides_code() {
+        let out = format!("{:?}", SteamGuardToken::new("K7Q2X"));
+        assert!(!out.contains("K7Q2X"), "{out}");
+        assert!(out.contains("redacted"));
     }
 }

@@ -101,11 +101,10 @@ impl Encoder<RawNetMessage> for RawMessageEncoder {
         }
 
         trace!(
-            "sending raw message({} byte header + {} byte body = {} bytes): {:?}",
+            "sending raw message({} byte header + {} byte body = {} bytes)",
             header_len,
             body_len,
-            raw.len(),
-            raw.as_ref()
+            raw.len()
         );
 
         let iv_buffer = item
