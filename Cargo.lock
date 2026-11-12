@@ -130,6 +130,7 @@ dependencies = [
  "tracing-subscriber",
  "vdf-reader",
  "webpki-roots 1.0.6",
+ "zeroize",
 ]
 
 [[package]]

@@ -4,7 +4,7 @@ version = "0.7.1"
 authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2024"
 description = "Interact with the Steam network via rust (Aurelia fork of steam-vent with per-session logon IDs)"
-license = "MIT"
+license = "GPL-3.0-or-later"
 repository = "https://codeberg.org/Drackrath/aurelia-steam-vent"
 readme = "README.md"
 rust-version = "1.88.0"
@@ -48,6 +48,7 @@ directories = "6.0.0"
 another-steam-totp = "0.4.2"
 async-stream = "0.3.6"
 rand = "0.10.0"
+zeroize = "1.8" # Wipe tokens on drop
 
 [dev-dependencies]
 tokio = { version = "1.47", features = ["macros", "rt", "rt-multi-thread"] }
