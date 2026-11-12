@@ -2,6 +2,11 @@
 
 ### Interact with the Steam network via rust
 
+> [!NOTE]
+> This fork of [steam-vent](https://codeberg.org/steam-vent/steam-vent) moved
+> from Codeberg to GitHub because of frequent codeberg.org outages. Its new
+> home is <https://github.com/Drackrath/aurelia-steam-vent>.
+
 This is the [Aurelia](https://github.com/Drackrath/Aurelia) fork of
 [steam-vent](https://codeberg.org/steam-vent/steam-vent), published as
 `aurelia-steam-vent`. The library is still imported as `steam_vent`. It differs
