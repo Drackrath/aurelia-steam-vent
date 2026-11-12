@@ -122,3 +122,12 @@ This is in large parts inspired by and based of
 [@DoctorMcKay's](https://github.com/DoctorMcKay) work on
 [SteamUser](https://github.com/DoctorMcKay/node-steam-user/), massive credits go
 to all who worked on that.
+
+## License
+
+This fork is licensed under the GNU General Public License v3.0 or later, see
+`LICENSE`.
+
+It is based on [steam-vent](https://codeberg.org/steam-vent/steam-vent), which
+is licensed under the MIT License. Upstream's license text is kept in
+`LICENSE-MIT`.
