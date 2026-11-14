@@ -191,6 +191,19 @@ impl Connection {
         &self.auth.ip_country_code
     }
 
+    /// Steam's clock minus ours, seconds.
+    ///
+    /// From the logon response.
+    pub fn server_time_offset(&self) -> i64 {
+        self.auth.server_time_offset
+    }
+
+    /// Steam's current Unix time.
+    pub fn server_time(&self) -> u32 {
+        let now = crate::session::local_unix_time() + self.auth.server_time_offset;
+        u32::try_from(now.max(0)).unwrap_or(u32::MAX)
+    }
+
     /// Change how long we wait for a response from methods that require a response before considering it failed.
     pub fn set_timeout(&mut self, timeout: Duration) {
         self.raw.timeout = timeout;
