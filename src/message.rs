@@ -2,12 +2,12 @@ use crate::net::{NetworkError, RawNetMessage};
 use binrw::BinRead;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::{Buf, BytesMut};
-use crc::{Crc, CRC_32_ISO_HDLC};
+use crc::{CRC_32_ISO_HDLC, Crc};
 use flate2::read::GzDecoder;
 use futures_util::{
+    StreamExt,
     future::ready,
     stream::{iter, once},
-    StreamExt,
 };
 use std::io::Error as IoError;
 use std::io::{Cursor, Read, Write};

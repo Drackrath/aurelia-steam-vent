@@ -1,6 +1,6 @@
 [package]
 name = "aurelia-steam-vent"
-version = "0.7.2"
+version = "0.7.3"
 authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2024"
 description = "Interact with the Steam network via rust (Aurelia fork of steam-vent with per-session logon IDs)"
