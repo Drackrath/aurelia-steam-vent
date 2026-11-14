@@ -138,6 +138,23 @@ pub(crate) struct SessionAuthenticationDetails {
     pub steam_id: SteamID,
     pub app_id: Option<u32>,
     pub refresh_token: RefreshToken,
+    /// Steam clock minus ours, seconds.
+    pub server_time_offset: i64,
+}
+
+/// Unix seconds now, local clock.
+pub(crate) fn local_unix_time() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+}
+
+/// Offset from a logon timestamp.
+pub(crate) fn server_time_offset(server_time: u32, local: i64) -> i64 {
+    if server_time == 0 {
+        return 0;
+    }
+    i64::from(server_time) - local
 }
 
 impl Default for RawSession {
@@ -187,7 +204,13 @@ pub async fn anonymous(connection: &RawConnection, account_type: AccountType) ->
         Universe::Public,
     );
     // Anonymous logons carry no token.
-    send_logon(connection, logon, steam_id, RefreshToken::anonymous(steam_id)).await
+    send_logon(
+        connection,
+        logon,
+        steam_id,
+        RefreshToken::anonymous(steam_id),
+    )
+    .await
 }
 
 pub async fn login(
@@ -283,6 +306,10 @@ async fn send_logon(
             steam_id: assigned_steam_id,
             app_id: None,
             refresh_token,
+            server_time_offset: server_time_offset(
+                response.rtime32_server_time(),
+                local_unix_time(),
+            ),
         },
     })
 }
@@ -309,6 +336,14 @@ pub async fn hello<C: ConnectionImpl>(conn: &mut C) -> std::result::Result<(), N
 #[cfg(test)]
 mod logon_id_tests {
     use super::*;
+
+    #[test]
+    fn server_time_offset_from_logon() {
+        assert_eq!(server_time_offset(1_800_000_100, 1_800_000_000), 100);
+        assert_eq!(server_time_offset(1_799_999_990, 1_800_000_000), -10);
+        // Missing field means no correction.
+        assert_eq!(server_time_offset(0, 1_800_000_000), 0);
+    }
 
     #[test]
     fn logon_id_is_sent_as_private_ip() {
