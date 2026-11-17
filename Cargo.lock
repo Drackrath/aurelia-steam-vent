@@ -90,12 +90,15 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "aurelia-steam-vent"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "another-steam-totp",
  "async-stream",
  "aurelia-steam-vent-core",
  "aurelia-steam-vent-crypto",
+ "aurelia-steam-vent-proto",
+ "aurelia-steam-vent-proto-common",
+ "aurelia-steam-vent-proto-steam",
  "base64",
  "binrw",
  "bytemuck",
@@ -115,9 +118,6 @@ dependencies = [
  "serde_json",
  "serde_with",
  "steam-machine-id",
- "steam-vent-proto",
- "steam-vent-proto-common",
- "steam-vent-proto-steam",
  "steamid-ng",
  "thiserror 2.0.18",
  "tokio",
@@ -133,10 +133,10 @@ dependencies = [
 
 [[package]]
 name = "aurelia-steam-vent-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
+ "aurelia-steam-vent-proto-common",
  "bytes",
- "steam-vent-proto-common",
  "thiserror 2.0.18",
  "tokio-stream",
  "tracing",
@@ -155,6 +155,34 @@ dependencies = [
  "rsa",
  "sha1 0.11.0",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "aurelia-steam-vent-proto"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "215d52d899afaf0b206fdc5aed2dfda7de2c61d46a2f6083ac5f1d61c4a37d20"
+dependencies = [
+ "aurelia-steam-vent-proto-common",
+ "aurelia-steam-vent-proto-steam",
+]
+
+[[package]]
+name = "aurelia-steam-vent-proto-common"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85c5392640035360a7b236104ebb58a91933c079a4b050d82314bbed45d95d97"
+dependencies = [
+ "protobuf",
+]
+
+[[package]]
+name = "aurelia-steam-vent-proto-steam"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "692f1d3706ee867c826a71d8f449482b44d82248bdc7432414ae4cb133f30ff6"
+dependencies = [
+ "aurelia-steam-vent-proto-common",
 ]
 
 [[package]]
@@ -1652,9 +1680,9 @@ dependencies = [
 
 [[package]]
 name = "protobuf"
-version = "3.5.1"
+version = "3.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bcc343da15609eaecd65f8aa76df8dc4209d325131d8219358c0aaaebab0bf6"
+checksum = "d65a1d4ddae7d8b5de68153b48f6aa3bba8cb002b243dbdbc55a5afbc98f99f4"
 dependencies = [
  "bytes",
  "once_cell",
@@ -1664,9 +1692,9 @@ dependencies = [
 
 [[package]]
 name = "protobuf-support"
-version = "3.5.1"
+version = "3.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0766e3675a627c327e4b3964582594b0e8741305d628a98a5de75a1d15f99b9"
+checksum = "3e36c2f31e0a47f9280fb347ef5e461ffcd2c52dd520d8e216b52f93b0b0d7d6"
 dependencies = [
  "thiserror 1.0.69",
 ]
@@ -2316,34 +2344,6 @@ dependencies = [
  "bytes",
  "rand 0.9.2",
  "sha1_smol",
-]
-
-[[package]]
-name = "steam-vent-proto"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8769088654e0d57a1029cc2da4f8f0a3202e9b83fadebb2e623adde206ff215d"
-dependencies = [
- "steam-vent-proto-common",
- "steam-vent-proto-steam",
-]
-
-[[package]]
-name = "steam-vent-proto-common"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62682aa488b34d33f1045f9e4ee3c33ceef709e878524188dea4431cfe4f2131"
-dependencies = [
- "protobuf",
-]
-
-[[package]]
-name = "steam-vent-proto-steam"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69b590586d9c9c002f36e7e65d14caaed2301249a7e1badae776a8349ed4a8ce"
-dependencies = [
- "steam-vent-proto-common",
 ]
 
 [[package]]
