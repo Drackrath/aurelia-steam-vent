@@ -2,7 +2,8 @@ use directories::ProjectDirs;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::error::Error;
-use std::fs::{create_dir_all, read_to_string, write};
+use std::fs::{create_dir_all, read_to_string};
+use std::io::Write;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -113,12 +114,42 @@ impl FileGuardDataStore {
             err,
             path: self.path.clone(),
         })?;
-        write(&self.path, raw).map_err(|err| FileStoreError::Write {
+        write_private(&self.path, raw.as_bytes()).map_err(|err| FileStoreError::Write {
             err,
             path: self.path.clone(),
         })?;
         Ok(())
     }
+}
+
+/// Owner-only file, replaced atomically.
+fn write_private(path: &std::path::Path, data: &[u8]) -> std::io::Result<()> {
+    let mut tmp_name = path.file_name().unwrap_or_default().to_os_string();
+    tmp_name.push(format!(".tmp{}", std::process::id()));
+    let tmp = path.with_file_name(tmp_name);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let result = (|| {
+        let mut file = options.open(&tmp)?;
+        // Mode only applies on creation.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+        }
+        file.write_all(data)?;
+        file.sync_all()?;
+        std::fs::rename(&tmp, path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
 }
 
 impl GuardDataStore for FileGuardDataStore {
@@ -152,5 +183,41 @@ impl GuardDataStore for NullGuardDataStore {
 
     async fn load(&mut self, _account: &str) -> Result<Option<String>, Self::Err> {
         Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_path() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("guard-data-test-{}", std::process::id()));
+        dir.join("nested").join("machine_tokens.json")
+    }
+
+    #[tokio::test]
+    async fn stores_and_loads_tokens() {
+        let path = temp_path().with_file_name("roundtrip.json");
+        let mut store = FileGuardDataStore::new(path.clone());
+        store.store("alice", "token".into()).await.unwrap();
+        assert_eq!(store.load("alice").await.unwrap().as_deref(), Some("token"));
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn token_file_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = temp_path();
+        create_dir_all(path.parent().unwrap()).unwrap();
+        // Pre-existing world-readable file.
+        std::fs::write(&path, "{}").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        let mut store = FileGuardDataStore::new(path.clone());
+        store.store("alice", "token".into()).await.unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+        let _ = std::fs::remove_file(path);
     }
 }
