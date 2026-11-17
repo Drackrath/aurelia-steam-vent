@@ -16,7 +16,7 @@ name = "steam_vent"
 steam-vent-proto-common = "0.5.1"
 steam-vent-proto-steam = "0.5.2"
 steam-vent-core = { package = "aurelia-steam-vent-core", version = "0.1", path = "./core" }
-steam-vent-crypto = { version = "0.2", path = "./crypto" }
+steam-vent-crypto = { package = "aurelia-steam-vent-crypto", version = "0.3", path = "./crypto" }
 steam-machine-id = "0.2.0"
 tokio = { version = "1.47.1", features = ["net", "io-util", "macros", "io-std"] }
 tokio-util = { version = "0.7.16", features = ["codec"] }
@@ -39,9 +39,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
 serde_with = { version = "3.21.0" , features = ["base64"] }
 reqwest = { version = "0.13.2", features = ["json"] }
-rsa = "0.9.10"
-num-traits = "0.2.19"
-num-bigint-dig = "0.8.6"
+rsa = { version = "0.10", features = ["pkcs1v15"] }
 base64 = "0.22.1"
 num_enum = "0.7.4"
 directories = "6.0.0"

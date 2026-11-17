@@ -1,6 +1,6 @@
 use rsa::pkcs8::DecodePublicKey;
 use rsa::traits::PublicKeyParts;
-use rsa::RsaPublicKey;
+use rsa::PublicKey;
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::fs;
@@ -12,9 +12,9 @@ fn main() {
     println!("cargo:rerun-if-changed=system.pem");
     println!("cargo:rerun-if-changed=build.rs");
     let key =
-        RsaPublicKey::from_public_key_pem(SYSTEM_PUBLIC_KEY_BYTES).expect("invalid public key");
-    let e = key.e().to_bytes_le();
-    let n = key.n().to_bytes_le();
+        PublicKey::from_public_key_pem(SYSTEM_PUBLIC_KEY_BYTES).expect("invalid public key");
+    let e = key.e().to_le_bytes_trimmed_vartime().to_vec();
+    let n = key.n().as_ref().to_le_bytes_trimmed_vartime().to_vec();
 
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("system_key.rs");

@@ -4,10 +4,10 @@ use aes::Aes256;
 use bytes::BytesMut;
 use cbc::cipher::block_padding::Pkcs7;
 use cbc::cipher::{BlockDecryptMut, BlockEncryptMut};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit as _, Mac};
 use once_cell::sync::Lazy;
-use rand::{random, Rng};
-use rsa::{BigUint, Oaep, Pkcs1v15Encrypt, Pss, RsaPublicKey};
+use rand::{random, RngExt as _};
+use rsa::{BoxedUint, Oaep, Pkcs1v15Encrypt, Pss, PublicKey};
 use sha1::Sha1;
 use std::convert::TryInto;
 use thiserror::Error;
@@ -32,17 +32,17 @@ mod system_key {
     include!(concat!(env!("OUT_DIR"), "/system_key.rs"));
 }
 
-static SYSTEM_PUBLIC_KEY: Lazy<RsaPublicKey> = Lazy::new(|| {
-    RsaPublicKey::new(
-        BigUint::from_bytes_le(system_key::N),
-        BigUint::from_bytes_le(system_key::E),
+static SYSTEM_PUBLIC_KEY: Lazy<PublicKey> = Lazy::new(|| {
+    PublicKey::new(
+        BoxedUint::from_le_slice_vartime(system_key::N),
+        BoxedUint::from_le_slice_vartime(system_key::E),
     )
     .expect("Failed to parse public key")
 });
 
 /// Verify sha1 signature using the steam "system" public key
 pub fn verify_signature(data: &[u8], signature: &[u8]) -> Result<bool> {
-    match SYSTEM_PUBLIC_KEY.verify(Pss::new::<Sha1>(), data, signature) {
+    match SYSTEM_PUBLIC_KEY.verify(Pss::<Sha1>::new(), data, signature) {
         Ok(_) => Ok(true),
         Err(rsa::errors::Error::Verification) => Ok(false),
         Err(err) => Err(CryptError::MalformedSignature(RsaError(err))),
@@ -55,8 +55,8 @@ pub struct SessionKeys {
 }
 
 pub fn generate_session_key(nonce: Option<&[u8; 16]>) -> SessionKeys {
-    let mut rng = rand::thread_rng();
-    let plain: [u8; 32] = rng.gen();
+    let mut rng = rand::rng();
+    let plain: [u8; 32] = rng.random();
 
     let encrypted = match nonce {
         Some(nonce) => {
@@ -72,15 +72,15 @@ pub fn generate_session_key(nonce: Option<&[u8; 16]>) -> SessionKeys {
     SessionKeys { plain, encrypted }
 }
 
-pub fn encrypt_with_key(key: &RsaPublicKey, data: &[u8]) -> Result<Vec<u8>> {
-    let mut rng = rand::thread_rng();
+pub fn encrypt_with_key(key: &PublicKey, data: &[u8]) -> Result<Vec<u8>> {
+    let mut rng = rand::rng();
     Ok(key
-        .encrypt(&mut rng, Oaep::new::<Sha1>(), data)
+        .encrypt(&mut rng, Oaep::<Sha1>::new(), data)
         .map_err(RsaError)?)
 }
 
-pub fn encrypt_with_key_pkcs1(key: &RsaPublicKey, data: &[u8]) -> Result<Vec<u8>> {
-    let mut rng = rand::thread_rng();
+pub fn encrypt_with_key_pkcs1(key: &PublicKey, data: &[u8]) -> Result<Vec<u8>> {
+    let mut rng = rand::rng();
     Ok(key
         .encrypt(&mut rng, Pkcs1v15Encrypt, data)
         .map_err(RsaError)?)
@@ -197,7 +197,7 @@ pub fn symmetric_encrypt_with_iv_buffer(
     let mut hmac_key = [0; 64];
     hmac_key[0..16].copy_from_slice(&key[0..16]);
 
-    let mut hmac = <HmacSha1 as Mac>::new(GenericArray::from_slice(&hmac_key));
+    let mut hmac = HmacSha1::new_from_slice(&hmac_key).expect("hmac takes any key size");
     hmac.update(&hmac_random);
     hmac.update(&input);
 
@@ -244,7 +244,7 @@ pub fn symmetric_decrypt(input: BytesMut, key: &[u8; 32]) -> Result<BytesMut> {
     let mut hmac_key = [0; 64];
     hmac_key[0..16].copy_from_slice(&key[0..16]);
 
-    let mut hmac = <HmacSha1 as Mac>::new(GenericArray::from_slice(&hmac_key));
+    let mut hmac = HmacSha1::new_from_slice(&hmac_key).expect("hmac takes any key size");
     hmac.update(hmac_random);
     hmac.update(&message);
 
@@ -267,4 +267,11 @@ fn roundtrip_test() {
     let decrypted = symmetric_decrypt(encrypted, &key).unwrap();
 
     assert_eq!(input, decrypted);
+}
+
+#[test]
+fn system_key_matches_pem() {
+    use rsa::traits::PublicKeyParts;
+    assert_eq!(SYSTEM_PUBLIC_KEY.n().as_ref().bits_vartime(), 1024);
+    assert_eq!(SYSTEM_PUBLIC_KEY.e().to_le_bytes_trimmed_vartime().as_ref(), &[17]);
 }
