@@ -1,6 +1,6 @@
 [package]
 name = "aurelia-steam-vent"
-version = "0.7.3"
+version = "0.8.0"
 authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2024"
 description = "Interact with the Steam network via rust (Aurelia fork of steam-vent with per-session logon IDs)"
@@ -13,9 +13,9 @@ rust-version = "1.88.0"
 name = "steam_vent"
 
 [dependencies]
-steam-vent-proto-common = "0.5.1"
-steam-vent-proto-steam = "0.5.2"
-steam-vent-core = { package = "aurelia-steam-vent-core", version = "0.1", path = "./core" }
+steam-vent-proto-common = { package = "aurelia-steam-vent-proto-common", version = "0.6.0" }
+steam-vent-proto-steam = { package = "aurelia-steam-vent-proto-steam", version = "0.6.0" }
+steam-vent-core = { package = "aurelia-steam-vent-core", version = "0.2", path = "./core" }
 steam-vent-crypto = { package = "aurelia-steam-vent-crypto", version = "0.3", path = "./crypto" }
 steam-machine-id = "0.2.0"
 tokio = { version = "1.47.1", features = ["net", "io-util", "macros", "io-std"] }
@@ -52,12 +52,5 @@ zeroize = "1.8" # Wipe tokens on drop
 tokio = { version = "1.47", features = ["macros", "rt", "rt-multi-thread"] }
 tracing-subscriber = "0.3.20"
 vdf-reader = "0.3.1"
-steam-vent-proto = "0.5.2"
+steam-vent-proto = { package = "aurelia-steam-vent-proto", version = "0.6.0" }
 
-[[example]]
-name = "backpack"
-required-features = ["steam-vent-proto/tf2"]
-
-[[example]]
-name = "inventory"
-required-features = ["steam-vent-proto/csgo"]

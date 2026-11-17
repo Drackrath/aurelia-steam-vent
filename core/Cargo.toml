@@ -1,6 +1,6 @@
 [package]
 name = "aurelia-steam-vent-core"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2024"
 description = "Core message types for aurelia-steam-vent (Aurelia fork of steam-vent)"
@@ -11,7 +11,7 @@ repository = "https://codeberg.org/Drackrath/aurelia-steam-vent"
 name = "steam_vent_core"
 
 [dependencies]
-steam-vent-proto-common = "0.5.1"
+steam-vent-proto-common = { package = "aurelia-steam-vent-proto-common", version = "0.6.0" }
 tokio-stream = "0.1.18"
 bytes = "1.11.1"
 tracing = "0.1.44"
