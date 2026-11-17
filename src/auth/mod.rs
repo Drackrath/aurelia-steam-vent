@@ -13,9 +13,7 @@ pub use client::*;
 pub use confirmation::*;
 use futures_util::future::{Either, select};
 pub use guard_data::*;
-use num_bigint_dig::BigUint;
-use num_traits::Num;
-use rsa::RsaPublicKey;
+use rsa::{BoxedUint, PublicKey as RsaPublicKey};
 use serde::Deserialize;
 use std::io::{Error as IoError, ErrorKind};
 use std::pin::pin;
@@ -294,6 +292,26 @@ async fn poll_until_info(
     }
 }
 
+/// Big-endian hex to an unsigned integer.
+fn hex_uint(hex: &str) -> Option<BoxedUint> {
+    let hex = hex.trim();
+    if hex.is_empty() || !hex.is_ascii() {
+        return None;
+    }
+    let padded;
+    let hex = if hex.len() % 2 == 1 {
+        padded = format!("0{hex}");
+        padded.as_str()
+    } else {
+        hex
+    };
+    let bytes = (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
+        .collect::<Option<Vec<u8>>>()?;
+    Some(BoxedUint::from_be_slice_vartime(&bytes))
+}
+
 #[instrument(skip(connection))]
 async fn get_password_rsa(
     connection: &mut RawConnection,
@@ -306,22 +324,16 @@ async fn get_password_rsa(
     };
     let response = service_method_un_authenticated(connection, req).await?;
 
-    let key_mod =
-        BigUint::from_str_radix(response.publickey_mod.as_deref().unwrap_or_default(), 16)
-            .map_err(|e| {
-                MalformedBody::new(
-                    EMsg::k_EMsgServiceMethodCallFromClient,
-                    IoError::new(ErrorKind::InvalidData, e),
-                )
-            })?;
-    let key_exp =
-        BigUint::from_str_radix(response.publickey_exp.as_deref().unwrap_or_default(), 16)
-            .map_err(|e| {
-                MalformedBody::new(
-                    EMsg::k_EMsgServiceMethodCallFromClient,
-                    IoError::new(ErrorKind::InvalidData, e),
-                )
-            })?;
+    let bad_key = |e: &str| {
+        MalformedBody::new(
+            EMsg::k_EMsgServiceMethodCallFromClient,
+            IoError::new(ErrorKind::InvalidData, e.to_string()),
+        )
+    };
+    let key_mod = hex_uint(response.publickey_mod.as_deref().unwrap_or_default())
+        .ok_or_else(|| bad_key("invalid rsa modulus"))?;
+    let key_exp = hex_uint(response.publickey_exp.as_deref().unwrap_or_default())
+        .ok_or_else(|| bad_key("invalid rsa exponent"))?;
     let key = RsaPublicKey::new(key_mod, key_exp).map_err(|e| {
         MalformedBody::new(
             EMsg::k_EMsgServiceMethodCallFromClient,
@@ -542,5 +554,21 @@ mod redaction_tests {
         let out = format!("{:?}", SteamGuardToken::new("K7Q2X"));
         assert!(!out.contains("K7Q2X"), "{out}");
         assert!(out.contains("redacted"));
+    }
+}
+
+#[cfg(test)]
+mod hex_tests {
+    use super::hex_uint;
+
+    #[test]
+    fn parses_steam_hex() {
+        let n = hex_uint("010001").unwrap();
+        assert_eq!(n.to_be_bytes_trimmed_vartime().as_ref(), &[1, 0, 1]);
+        let odd = hex_uint("10001").unwrap();
+        assert_eq!(odd.to_be_bytes_trimmed_vartime().as_ref(), &[1, 0, 1]);
+        assert!(hex_uint("").is_none());
+        assert!(hex_uint("zz").is_none());
+        assert!(hex_uint("é1").is_none());
     }
 }
